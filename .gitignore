@@ -1,4 +1,5 @@
 # App
+/secrets/
 node_modules/
 *.sqlite
 order_*.pdf

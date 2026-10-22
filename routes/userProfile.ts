@@ -54,26 +54,10 @@ export function getUserProfile () {
     const themeKey = config.get<string>('application.theme') as keyof typeof themes
     const theme = themes[themeKey] || themes['bluegrey-lightgreen']
 
-    if (utils.isChallengeEnabled(challenges.usernameXssChallenge)) {
-      if (username?.match(/#{(.*)}/) !== null) {
-        req.app.locals.abused_ssti_bug = true
-        const code = username?.substring(2, username.length - 1)
-        try {
-          if (!code) {
-            throw new Error('Username is null')
-          }
-          username = eval(code) // eslint-disable-line no-eval
-        } catch (err) {
-          username = '\\' + username
-        }
-      } else {
-        username = '\\' + username
-      }
-      if (username) {
-        template = template.replace(/_username_/g, username)
-      }
-    } else {
-      template = template.replace(/_username_/g, '#{username}')
+    // Compile a fixed template and pass the username only as a local. Never
+    // interpolate attacker-controlled input into the Pug source.
+    if (!utils.isChallengeEnabled(challenges.usernameXssChallenge)) {
+      username = entities.encode(username ?? '')
     }
     template = template.replace(/_emailHash_/g, security.hash(user?.email))
     template = template.replace(/_title_/g, entities.encode(config.get<string>('application.name')))
@@ -98,7 +82,7 @@ export function getUserProfile () {
         'Content-Security-Policy': CSP
       })
 
-      res.send(fn(user))
+      res.send(fn({ ...user.get(), username }))
     } catch (err) {
       next(new Error('Blocked illegal activity by ' + req.socket.remoteAddress))
     }

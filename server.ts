@@ -446,6 +446,14 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
     next()
   })
   app.post('/api/Users', verify.registerAdminChallenge())
+  // Do not allow public registrations to choose a privileged role.
+  // Run after the challenge check so it can still inspect the submitted role.
+  app.post('/api/Users', (req: Request, res: Response, next: NextFunction) => {
+    if (req.body && typeof req.body === 'object') {
+      req.body.role = security.roles.customer
+    }
+    next()
+  })
   app.post('/api/Users', verify.passwordRepeatChallenge()) // vuln-code-snippet hide-end
   app.post('/api/Users', verify.emptyUserRegistration())
   /* Unauthorized users are not allowed to access B2B API */

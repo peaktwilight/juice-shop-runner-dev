@@ -9,6 +9,15 @@ import * as security from '../lib/insecurity'
 
 async function retrieveUserList (req: Request, res: Response, next: NextFunction) {
   try {
+    const authenticatedUser = security.authenticatedUsers.from(req)
+    const user = authenticatedUser?.data?.email
+      ? await UserModel.findOne({ where: { email: authenticatedUser.data.email }, attributes: ['role'] })
+      : null
+    if (user?.role !== security.roles.admin) {
+      res.status(403).json({ error: 'You are not allowed to access this resource.' })
+      return
+    }
+
     const users = await UserModel.findAll()
 
     res.json({

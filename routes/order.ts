@@ -36,7 +36,11 @@ export function placeOrder () {
       .then(async (basket: BasketModel | null) => {
         if (basket != null) {
           const customer = security.authenticatedUsers.from(req)
-          const email = customer ? customer.data ? customer.data.email : '' : ''
+          if (!customer?.data?.id || Number(basket.UserId) !== Number(customer.data.id)) {
+            res.status(403).json({ error: 'Not authorized to checkout this basket' })
+            return
+          }
+          const email = customer.data.email ?? ''
           const orderId = security.hash(email).slice(0, 4) + '-' + utils.randomHexString(16)
           const pdfFile = `order_${orderId}.pdf`
           const { default: PDFDocument } = await import('pdfkit')

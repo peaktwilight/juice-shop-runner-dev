@@ -28,11 +28,13 @@ async function extractZipBuffer (buffer: Buffer) {
   const directory = await unzipper.Open.buffer(buffer)
   for (const entry of directory.files) {
     const fileName = entry.path
-    const absolutePath = path.resolve('uploads/complaints/' + fileName)
-    challengeUtils.solveIf(challenges.fileWriteChallenge, () => { return absolutePath === path.resolve('ftp/legal.md') })
-    if (absolutePath.includes(path.resolve('.'))) {
-      await pipeline(entry.stream(), fs.createWriteStream('uploads/complaints/' + fileName))
+    const complaintsDirectory = path.resolve('uploads/complaints')
+    const absolutePath = path.resolve(complaintsDirectory, fileName)
+    if (!absolutePath.startsWith(complaintsDirectory + path.sep)) {
+      continue
     }
+    challengeUtils.solveIf(challenges.fileWriteChallenge, () => { return absolutePath === path.resolve('ftp/legal.md') })
+    await pipeline(entry.stream(), fs.createWriteStream(absolutePath))
   }
 }
 

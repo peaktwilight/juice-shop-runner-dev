@@ -15,12 +15,14 @@ import * as challengeUtils from '../lib/challengeUtils'
 import logger from '../lib/logger'
 import config from 'config'
 import * as utils from '../lib/utils'
+import * as security from '../lib/insecurity'
 import { totalCheatScore } from '../lib/antiCheat'
 import * as accuracy from '../lib/accuracy'
 import { reviewsCollection, ordersCollection } from '../data/mongodb'
 import { challenges } from '../data/datacache'
 import * as Prometheus from 'prom-client'
 import onFinished from 'on-finished'
+import jwt from 'jsonwebtoken'
 
 const register = Prometheus.register
 
@@ -83,6 +85,24 @@ export function observeFileUploadMetricsMiddleware () {
 
 export function serveMetrics () {
   return async (req: Request, res: Response, next: NextFunction) => {
+    const token = utils.jwtFrom(req)
+    let authenticatedUser: { data?: { role?: string } } | undefined
+    try {
+      if (token) {
+        authenticatedUser = await new Promise<{ data?: { role?: string } }>((resolve, reject) => {
+          jwt.verify(token, security.publicKey, { algorithms: ['RS256'] }, (error, decoded) => {
+            if (error) reject(error)
+            else resolve(decoded as { data?: { role?: string } })
+          })
+        })
+      }
+    } catch {
+      // Invalid and expired tokens are not authenticated.
+    }
+    if (authenticatedUser?.data?.role !== security.roles.admin) {
+      res.status(token ? 403 : 401).json({ error: 'Admin authentication required' })
+      return
+    }
     challengeUtils.solveIf(challenges.exposedMetricsChallenge, () => {
       const userAgent = req.headers['user-agent'] ?? ''
       const ignoredUserAgents = config.get<string[]>('challenges.metricsIgnoredUserAgents')

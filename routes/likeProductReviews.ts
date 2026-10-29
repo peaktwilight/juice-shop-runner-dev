@@ -12,6 +12,7 @@ import { type Review } from '../data/types'
 import * as db from '../data/mongodb'
 
 const sleep = async (ms: number) => await new Promise(resolve => setTimeout(resolve, ms))
+const usersCurrentlyLiking = new Set<string>()
 
 export function likeProductReviews () {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -20,6 +21,12 @@ export function likeProductReviews () {
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+
+    const likeKey = `${String(id)}:${user.data.email}`
+    if (usersCurrentlyLiking.has(likeKey)) {
+      return res.status(403).json({ error: 'Not allowed' })
+    }
+    usersCurrentlyLiking.add(likeKey)
 
     try {
       const review = await db.reviewsCollection.findOne({ _id: id })
@@ -57,6 +64,8 @@ export function likeProductReviews () {
       }
     } catch (err) {
       res.status(400).json({ error: 'Wrong Params' })
+    } finally {
+      usersCurrentlyLiking.delete(likeKey)
     }
   }
 }

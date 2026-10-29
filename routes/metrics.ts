@@ -70,11 +70,24 @@ export function observeRequestMetricsMiddleware () {
   }
 }
 
+const trackedUploadMimeTypes = new Set([
+  'application/pdf',
+  'application/zip',
+  'application/xml',
+  'text/xml',
+  'application/yaml',
+  'text/yaml',
+  'image/png',
+  'image/jpeg',
+  'application/octet-stream'
+])
+
 export function observeFileUploadMetricsMiddleware () {
   return ({ file }: Request, res: Response, next: NextFunction) => {
     onFinished(res, () => {
       if (file != null) {
-        res.statusCode < 400 ? fileUploadsCountMetric.labels(file.mimetype).inc() : fileUploadErrorsMetric.labels(file.mimetype).inc()
+        const fileType = trackedUploadMimeTypes.has(file.mimetype) ? file.mimetype : 'other'
+        res.statusCode < 400 ? fileUploadsCountMetric.labels(fileType).inc() : fileUploadErrorsMetric.labels(fileType).inc()
       }
     })
     next()

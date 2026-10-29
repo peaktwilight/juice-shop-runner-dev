@@ -34,7 +34,8 @@ export function addBasketItem () {
     }
 
     const user = security.authenticatedUsers.from(req)
-    if (user && basketIds[0] && basketIds[0] !== 'undefined' && Number(user.bid) != Number(basketIds[0])) { // eslint-disable-line eqeqeq
+    const requestedBasketId = basketIds[basketIds.length - 1]
+    if (!user || !requestedBasketId || requestedBasketId === 'undefined' || Number(user.bid) !== Number(requestedBasketId)) {
       res.status(401).send('{\'error\' : \'Invalid BasketId\'}')
     } else {
       const basketItem = {

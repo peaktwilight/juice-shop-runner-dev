@@ -28,11 +28,14 @@ async function extractZipBuffer (buffer: Buffer) {
   const directory = await unzipper.Open.buffer(buffer)
   for (const entry of directory.files) {
     const fileName = entry.path
-    const absolutePath = path.resolve('uploads/complaints/' + fileName)
-    challengeUtils.solveIf(challenges.fileWriteChallenge, () => { return absolutePath === path.resolve('ftp/legal.md') })
-    if (absolutePath.includes(path.resolve('.'))) {
-      await pipeline(entry.stream(), fs.createWriteStream('uploads/complaints/' + fileName))
+    const uploadDirectory = path.resolve('uploads/complaints')
+    const absolutePath = path.resolve(uploadDirectory, fileName)
+    const relativePath = path.relative(uploadDirectory, absolutePath)
+    if (relativePath === '' || relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+      throw new Error('ZIP entry path must stay inside the complaints upload directory')
     }
+    challengeUtils.solveIf(challenges.fileWriteChallenge, () => { return absolutePath === path.resolve('ftp/legal.md') })
+    await pipeline(entry.stream(), fs.createWriteStream(absolutePath))
   }
 }
 

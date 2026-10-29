@@ -36,6 +36,20 @@ let fileUploadErrorsMetric = new Prometheus.Counter({
   labelNames: ['file_type']
 })
 
+const knownFileTypeMetricLabels = new Set([
+  'application/pdf',
+  'application/xml',
+  'text/xml',
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/yaml',
+  'text/yaml',
+  'application/x-yaml',
+  'image/png',
+  'image/jpeg',
+  'image/jpg'
+])
+
 let httpRequestsMetric = new Prometheus.Counter({
   name: 'http_requests_count',
   help: 'Total HTTP request count grouped by status code.',
@@ -74,7 +88,9 @@ export function observeFileUploadMetricsMiddleware () {
   return ({ file }: Request, res: Response, next: NextFunction) => {
     onFinished(res, () => {
       if (file != null) {
-        res.statusCode < 400 ? fileUploadsCountMetric.labels(file.mimetype).inc() : fileUploadErrorsMetric.labels(file.mimetype).inc()
+        // MIME types come from the client; only retain a bounded set of label values.
+        const fileType = knownFileTypeMetricLabels.has(file.mimetype) ? file.mimetype : 'other'
+        res.statusCode < 400 ? fileUploadsCountMetric.labels(fileType).inc() : fileUploadErrorsMetric.labels(fileType).inc()
       }
     })
     next()

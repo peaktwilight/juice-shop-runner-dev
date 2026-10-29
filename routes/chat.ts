@@ -42,8 +42,12 @@ const appName = config.get<string>('application.name')
 export async function getUserId (req: Request): Promise<number | undefined> {
   const token = utils.jwtFrom(req)
   if (!token) return undefined
-  const decoded = security.decode(token) as { data?: { id?: number } } | undefined
-  return decoded?.data?.id
+  try {
+    const decoded = security.verify(token) ? security.decode(token) as { data?: { id?: number } } | undefined : undefined
+    return decoded?.data?.id
+  } catch {
+    return undefined
+  }
 }
 
 export async function getUserNameFromToken (req: Request): Promise<string | undefined> {

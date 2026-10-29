@@ -13,7 +13,8 @@ export function applyCoupon () {
       const id = params.id
       let coupon: string | undefined | null = params.coupon ? decodeURIComponent(params.coupon) : undefined
       const discount = security.discountFromCoupon(coupon)
-      coupon = discount ? coupon : null
+      const acceptedDiscount = typeof discount === 'number' && Number.isInteger(discount) && discount >= 1 && discount <= 15 ? discount : undefined
+      coupon = acceptedDiscount !== undefined ? coupon : null
 
       const basket = await BasketModel.findByPk(id)
       if (!basket) {
@@ -22,8 +23,8 @@ export function applyCoupon () {
       }
 
       await basket.update({ coupon: coupon?.toString() })
-      if (discount) {
-        return res.json({ discount })
+      if (acceptedDiscount !== undefined) {
+        return res.json({ discount: acceptedDiscount })
       } else {
         return res.status(404).send('Invalid coupon.')
       }

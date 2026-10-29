@@ -8,6 +8,11 @@ import { decode } from 'jsonwebtoken'
 import * as security from '../lib/insecurity'
 
 async function retrieveUserList (req: Request, res: Response, next: NextFunction) {
+  if (security.authenticatedUsers.from(req)?.data?.role !== security.roles.admin) {
+    res.status(403).json({ error: 'Forbidden' })
+    return
+  }
+
   try {
     const users = await UserModel.findAll()
 

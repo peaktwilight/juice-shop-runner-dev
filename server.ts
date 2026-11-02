@@ -421,6 +421,7 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
   app.use('/api/SecurityQuestions/:id', security.denyAll())
   /* SecurityAnswers: Only POST of answer allowed. */
   app.get('/api/SecurityAnswers', security.denyAll())
+  app.post('/api/SecurityAnswers', security.appendUserId())
   app.use('/api/SecurityAnswers/:id', security.denyAll())
   /* REST API */
   app.use('/rest/user/authentication-details', security.isAuthorized())

@@ -26,13 +26,16 @@ function ensureFileIsPassed ({ file }: Request, res: Response, next: NextFunctio
 
 async function extractZipBuffer (buffer: Buffer) {
   const directory = await unzipper.Open.buffer(buffer)
+  const uploadRoot = path.resolve('uploads/complaints')
   for (const entry of directory.files) {
     const fileName = entry.path
-    const absolutePath = path.resolve('uploads/complaints/' + fileName)
-    challengeUtils.solveIf(challenges.fileWriteChallenge, () => { return absolutePath === path.resolve('ftp/legal.md') })
-    if (absolutePath.includes(path.resolve('.'))) {
-      await pipeline(entry.stream(), fs.createWriteStream('uploads/complaints/' + fileName))
+    const absolutePath = path.resolve(uploadRoot, fileName)
+    const relativePath = path.relative(uploadRoot, absolutePath)
+    if (relativePath === '' || relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+      throw new Error('Zip entry path escapes upload directory')
     }
+    challengeUtils.solveIf(challenges.fileWriteChallenge, () => { return absolutePath === path.resolve('ftp/legal.md') })
+    await pipeline(entry.stream(), fs.createWriteStream(absolutePath))
   }
 }
 

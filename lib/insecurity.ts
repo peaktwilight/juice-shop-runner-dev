@@ -94,29 +94,35 @@ export const userEmailFrom = ({ headers }: any) => {
   return headers ? headers['x-user-email'] : undefined
 }
 
+const couponSecret = process.env.COUPON_SECRET ?? crypto.randomBytes(32)
+
 export const generateCoupon = (discount: number, date = new Date()) => {
-  const coupon = utils.toMMMYY(date) + '-' + discount
-  return z85.encode(coupon)
+  const payload = utils.toMMMYY(date) + '-' + discount
+  const signature = crypto.createHmac('sha256', couponSecret).update(payload).digest('hex')
+  return z85.encode(payload + '-' + signature)
 }
 
 export const discountFromCoupon = (coupon?: string) => {
   if (!coupon) {
     return undefined
   }
-  const decoded = z85.decode(coupon)
-  if (decoded && (hasValidFormat(decoded.toString()) != null)) {
-    const parts = decoded.toString().split('-')
-    const validity = parts[0]
-    if (utils.toMMMYY(new Date()) === validity) {
-      const discount = parts[1]
-      return parseInt(discount)
-    }
+  const decoded = z85.decode(coupon).toString()
+  const match = decoded.match(/^((?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[0-9]{2}-[0-9]+)-([a-f0-9]{64})$/)
+  if (!match) {
+    return undefined
+  }
+  const payload = match[1]
+  const signature = match[2]
+  const expectedSignature = crypto.createHmac('sha256', couponSecret).update(payload).digest('hex')
+  if (!crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expectedSignature, 'hex'))) {
+    return undefined
+  }
+  const [validity, discount] = payload.split('-')
+  if (utils.toMMMYY(new Date()) === validity) {
+    return parseInt(discount)
   }
 }
 
-function hasValidFormat (coupon: string) {
-  return coupon.match(/(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[0-9]{2}-[0-9]{2}/)
-}
 
 // vuln-code-snippet start redirectCryptoCurrencyChallenge redirectChallenge
 export const redirectAllowlist = new Set([

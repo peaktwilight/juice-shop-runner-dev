@@ -8,7 +8,7 @@ import { BasketModel } from '../models/basket'
 import * as security from '../lib/insecurity'
 
 export function applyCoupon () {
-  return async ({ params }: Request, res: Response, next: NextFunction) => {
+  return async ({ params, body }: Request, res: Response, next: NextFunction) => {
     try {
       const id = params.id
       let coupon: string | undefined | null = params.coupon ? decodeURIComponent(params.coupon) : undefined
@@ -19,6 +19,10 @@ export function applyCoupon () {
       if (!basket) {
         next(new Error(`Basket with id=${id} does not exist.`))
         return
+      }
+
+      if (basket.UserId !== body.UserId) {
+        return res.status(403).send('Forbidden')
       }
 
       await basket.update({ coupon: coupon?.toString() })

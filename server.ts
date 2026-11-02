@@ -38,6 +38,7 @@ import { CardModel } from './models/card'
 import { HintModel } from './models/hint'
 import { WalletModel } from './models/wallet'
 import { ProductModel } from './models/product'
+import { BasketModel } from './models/basket'
 import { RecycleModel } from './models/recycle'
 import { AddressModel } from './models/address'
 import { QuantityModel } from './models/quantity'
@@ -382,6 +383,17 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
   app.use(security.updateAuthenticatedUsers()) // vuln-code-snippet hide-line
   /* Baskets: Unauthorized users are not allowed to access baskets */
   app.use('/rest/basket', security.isAuthorized(), security.appendUserId())
+  app.use('/rest/basket/:id', (req: Request, res: Response, next: NextFunction) => {
+    void BasketModel.findOne({ where: { id: req.params.id, UserId: req.body.UserId } })
+      .then((basket) => {
+        if (basket) {
+          next()
+        } else {
+          res.status(403).json({ error: 'Basket access denied' })
+        }
+      })
+      .catch(next)
+  })
   /* BasketItems: API only accessible for authenticated users */
   app.use('/api/BasketItems', security.isAuthorized())
   app.use('/api/BasketItems/:id', security.isAuthorized())
